@@ -45,6 +45,10 @@ func main() {
 	e.POST("/api/user", handlers.GetUserByEmailAndPassword)
 	e.POST("/api/user/add", handlers.AddUser)
 
+	e.GET("/api/reservations", handlers.GetReservations)
+	e.GET("/api/reservations/:user_id", handlers.GetReservationByUserId)
+	e.POST("/api/reservation", handlers.AddReservation)
+
 	// WebSocketエンドポイントの設定
 	e.GET("/ws", websocket.HandleWebSocket)
 	// メッセージをブロードキャストするためのゴルーチン
