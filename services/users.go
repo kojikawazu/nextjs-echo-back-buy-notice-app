@@ -17,6 +17,7 @@ func FetchUsers() ([]models.UserData, error) {
         ORDER BY created_at DESC
     `
 
+	// Supabaseからクエリを実行し、全ユーザーを取得
 	rows, err := supabase.Pool.Query(supabase.Ctx, query)
 	if err != nil {
 		log.Printf("Failed to fetch users: %v", err)
@@ -68,8 +69,8 @@ func FetchUserByEmailAndPassword(email, password string) (*models.UserData, erro
 	// Supabaseからクエリを実行し、条件に一致するユーザーを取得
 	row := supabase.Pool.QueryRow(supabase.Ctx, query, email, password)
 
-	var user models.UserData
 	// 取得した結果をスキャン
+	var user models.UserData
 	err := row.Scan(
 		&user.ID,
 		&user.Name,
@@ -98,8 +99,10 @@ func FetchUserById(id string) (*models.UserData, error) {
         LIMIT 1
     `
 
+	// Supabaseからクエリを実行し、条件に一致するユーザーを取得
 	row := supabase.Pool.QueryRow(supabase.Ctx, query, id)
 
+	// ユーザーをスキャン
 	var user models.UserData
 	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
@@ -123,8 +126,10 @@ func FetchUserByEmail(email string) (*models.UserData, error) {
         LIMIT 1
     `
 
+	// Supabaseからクエリを実行し、条件に一致するユーザーを取得
 	row := supabase.Pool.QueryRow(supabase.Ctx, query, email)
 
+	// ユーザーをスキャン
 	var user models.UserData
 	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt)
 	if err != nil {
@@ -141,12 +146,36 @@ func FetchUserByEmail(email string) (*models.UserData, error) {
 func CreateUser(name, email, password string) error {
 	log.Printf("Creating new user with email: %s\n", email)
 
+	// トランザクションの開始
+	tx, err := supabase.Pool.Begin(supabase.Ctx)
+	if err != nil {
+		log.Printf("Failed to begin transaction: %v", err)
+		return err
+	}
+
+	// トランザクションが成功または失敗した場合にコミットまたはロールバックを行う
+	defer func() {
+		if err != nil {
+			log.Println("Rolling back transaction...")
+			if rollbackErr := tx.Rollback(supabase.Ctx); rollbackErr != nil {
+				log.Printf("Failed to rollback transaction: %v", rollbackErr)
+			}
+			return
+		}
+
+		log.Println("Committing transaction...")
+		if commitErr := tx.Commit(supabase.Ctx); commitErr != nil {
+			log.Printf("Failed to commit transaction: %v", commitErr)
+		}
+	}()
+
 	query := `
         INSERT INTO users (name, email, password, created_at, updated_at)
         VALUES ($1, $2, $3, NOW(), NOW())
     `
 
-	_, err := supabase.Pool.Exec(supabase.Ctx, query, name, email, password)
+	// ユーザーを挿入
+	_, err = tx.Exec(supabase.Ctx, query, name, email, password)
 	if err != nil {
 		log.Printf("Failed to create user: %v", err)
 		return err
