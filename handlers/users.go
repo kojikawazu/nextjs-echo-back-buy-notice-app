@@ -38,6 +38,7 @@ func GetUserByEmailAndPassword(c echo.Context) error {
 		Password string `json:"password"`
 	}
 
+	// リクエストボディをバインド
 	var reqBody RequestBody
 	if err := c.Bind(&reqBody); err != nil {
 		log.Printf("Failed to bind request body: %v", err)
@@ -79,6 +80,7 @@ func GetUserByEmailAndPassword(c echo.Context) error {
 // ユーザーが既に存在する場合、409 Conflictを返し、存在しない場合は新規作成する。
 func AddUser(c echo.Context) error {
 	log.Println("Creating new user...")
+
 	// リクエストボディからデータを取得
 	type RequestBody struct {
 		Name     string `json:"name"`
@@ -86,6 +88,7 @@ func AddUser(c echo.Context) error {
 		Password string `json:"password"`
 	}
 
+	// リクエストボディをバインド
 	var reqBody RequestBody
 	if err := c.Bind(&reqBody); err != nil {
 		log.Printf("Failed to bind request body: %v", err)

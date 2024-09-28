@@ -17,6 +17,7 @@ func FetchReservations() ([]models.ReservationData, error) {
         ORDER BY created_at DESC
     `
 
+	// Supabaseからクエリを実行し、全予約情報を取得
 	rows, err := supabase.Pool.Query(supabase.Ctx, query)
 	if err != nil {
 		log.Printf("Failed to fetch reservations: %v", err)
@@ -56,6 +57,32 @@ func FetchReservations() ([]models.ReservationData, error) {
 	return reservations, nil
 }
 
+// 指定されたIDに対応する予約情報を取得する。
+// 予約情報が見つからない場合、エラーを返す。
+func FetchReservationById(id string) (*models.ReservationData, error) {
+	log.Printf("Checking if reservation exists with id: %s\n", id)
+
+	query := `
+        SELECT id, user_id, reservation_date, num_people, special_request, status, created_at, updated_at
+        FROM reservations
+        WHERE id = $1
+    `
+
+	// Supabaseからクエリを実行し、条件に一致する予約情報を取得
+	row := supabase.Pool.QueryRow(supabase.Ctx, query, id)
+
+	// 取得した結果をスキャン
+	var reservation models.ReservationData
+	err := row.Scan(&reservation.ID, &reservation.UserId, &reservation.ReservationDate, &reservation.NumPeople, &reservation.SpecialRequest, &reservation.Status, &reservation.CreatedAt, &reservation.UpdatedAt)
+	if err != nil {
+		log.Printf("Reservation not found or error fetching reservation: %v", err)
+		return nil, err
+	}
+
+	log.Printf("Reservation found: %v", reservation)
+	return &reservation, nil
+}
+
 // 指定されたユーザーIDに対応する予約情報を取得する。
 // 予約情報が見つからない場合、エラーを返す。
 func FetchReservationByUserId(userId string) (*models.ReservationData, error) {
@@ -67,8 +94,10 @@ func FetchReservationByUserId(userId string) (*models.ReservationData, error) {
         WHERE user_id = $1
     `
 
+	// Supabaseからクエリを実行し、条件に一致する予約情報を取得
 	row := supabase.Pool.QueryRow(supabase.Ctx, query, userId)
 
+	// 取得した結果をスキャン
 	var reservation models.ReservationData
 	err := row.Scan(&reservation.ID, &reservation.UserId, &reservation.ReservationDate, &reservation.NumPeople, &reservation.SpecialRequest, &reservation.Status, &reservation.CreatedAt, &reservation.UpdatedAt)
 	if err != nil {
@@ -113,6 +142,7 @@ func CreateReservation(userId, reservationDate string, numPeople int, specialReq
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
     `
 
+	// 予約情報を挿入
 	_, err = tx.Exec(supabase.Ctx, query, userId, reservationDate, numPeople, specialRequest, status)
 	if err != nil {
 		log.Printf("Failed to create reservation: %v", err)
