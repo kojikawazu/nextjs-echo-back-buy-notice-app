@@ -9,6 +9,8 @@ go get github.com/joho/godotenv
 go get github.com/spf13/viper
 go get github.com/jackc/pgx/v4/pgxpool
 go get github.com/redis/go-redis/v9
+
+go get github.com/gorilla/websocket
 ```
 
 ## モジュールの整理
