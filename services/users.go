@@ -86,6 +86,31 @@ func FetchUserByEmailAndPassword(email, password string) (*models.UserData, erro
 	return &user, nil
 }
 
+// 指定されたIDに対応するユーザーを取得する。
+// ユーザーが見つからない場合、エラーを返す。
+func FetchUserById(id string) (*models.UserData, error) {
+	log.Printf("Checking if user exists with id: %s\n", id)
+
+	query := `
+        SELECT id, name, email, created_at, updated_at
+        FROM users
+        WHERE id = $1
+        LIMIT 1
+    `
+
+	row := supabase.Pool.QueryRow(supabase.Ctx, query, id)
+
+	var user models.UserData
+	err := row.Scan(&user.ID, &user.Name, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	if err != nil {
+		log.Printf("User not found or error fetching user: %v", err)
+		return nil, err
+	}
+
+	log.Printf("User found: %v", user)
+	return &user, nil
+}
+
 // 指定されたメールアドレスに対応するユーザーを取得する。
 // ユーザーが見つからない場合、エラーを返す。
 func FetchUserByEmail(email string) (*models.UserData, error) {
