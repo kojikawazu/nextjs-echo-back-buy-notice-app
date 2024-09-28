@@ -3,6 +3,7 @@ package main
 import (
 	"backend/handlers"
 	"backend/supabase"
+	"backend/websocket"
 
 	"log"
 	"net/http"
@@ -43,6 +44,11 @@ func main() {
 	e.GET("/api/users", handlers.GetUsers)
 	e.POST("/api/user", handlers.GetUserByEmailAndPassword)
 	e.POST("/api/user/add", handlers.AddUser)
+
+	// WebSocketエンドポイントの設定
+	e.GET("/ws", websocket.HandleWebSocket)
+	// メッセージをブロードキャストするためのゴルーチン
+	go websocket.HandleMessages()
 
 	// ヘルスチェックエンドポイントの追加
 	e.GET("/", func(c echo.Context) error {
