@@ -39,6 +39,11 @@ func main() {
 	// ミドルウェアの設定
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	// CORSを有効化
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{os.Getenv("ALLOWED_ORIGINS")},
+		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+	}))
 
 	// APIエンドポイントの設定
 	e.GET("/api/users", handlers.GetUsers)
