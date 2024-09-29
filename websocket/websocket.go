@@ -2,6 +2,7 @@ package websocket
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -46,6 +47,7 @@ var (
 // WebSocketハンドラー
 func HandleWebSocket(c echo.Context) error {
 	log.Println("WebSocket connection requested")
+
 	// WebSocket接続をアップグレード
 	ws, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -72,52 +74,43 @@ func HandleWebSocket(c echo.Context) error {
 
 	// クライアントからのメッセージを受信
 	for {
+		log.Println("Waiting for message...")
+
 		_, msg, err := ws.ReadMessage()
 		if err != nil {
 			log.Printf("WebSocket read error: %v", err)
 			break
 		}
+		log.Println("Message received")
 
-		log.Printf("Received message: %s", msg)
+		// メッセージのタイプで処理を分岐
+		var messageData map[string]interface{}
+		if err := json.Unmarshal(msg, &messageData); err != nil {
+			log.Printf("Invalid message format: %v", err)
+			continue
+		}
 
-		// Redisにメッセージをパブリッシュ
-		err = rdb.Publish(ctx, "websocket-channel", msg).Err()
-		if err != nil {
-			log.Printf("Failed to publish message to Redis: %v", err)
+		// メッセージタイプが存在するか確認
+		messageType, ok := messageData["type"].(string)
+		if !ok {
+			log.Println("Message type missing or invalid")
+			continue
+		}
+
+		log.Println("Message type:", messageType)
+		// メッセージタイプによって処理を分岐
+		switch messageType {
+		case "debug":
+			// デバッグメッセージの処理
+			handleDebugMessage(messageData)
+		case "reservation_notification":
+			// 予約通知の処理
+			handleReservationNotification(messageData)
+		default:
+			log.Printf("Unknown message type: %s", messageType)
 		}
 	}
 
 	log.Println("WebSocket connection closed")
 	return nil
-}
-
-// Redisからのメッセージをすべてのクライアントにブロードキャスト
-func HandleMessages() {
-	log.Println("Starting to broadcast messages from Redis")
-	// Redis Pub/Sub をサブスクライブ
-	pubsub := rdb.Subscribe(ctx, "websocket-channel")
-	defer pubsub.Close()
-
-	for {
-		// Redisからのメッセージを受信
-		msg, err := pubsub.ReceiveMessage(ctx)
-		if err != nil {
-			log.Printf("Failed to receive message from Redis: %v", err)
-			continue
-		}
-
-		log.Printf("Broadcasting message from Redis: %s", msg.Payload)
-
-		// すべてのWebSocketクライアントにメッセージを送信
-		mutex.Lock()
-		for client := range clients {
-			err := client.WriteMessage(websocket.TextMessage, []byte(msg.Payload))
-			if err != nil {
-				log.Printf("WebSocket write error: %v", err)
-				client.Close()
-				delete(clients, client)
-			}
-		}
-		mutex.Unlock()
-	}
 }

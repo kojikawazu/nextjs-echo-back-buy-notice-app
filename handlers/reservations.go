@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"backend/services"
+	"backend/websocket"
 	"log"
 	"net/http"
 	"time"
@@ -70,6 +71,7 @@ func AddReservation(c echo.Context) error {
 		Status          string `json:"status"`           // ステータス
 	}
 
+	// リクエストボディをバインド
 	var reqBody RequestBody
 	if err := c.Bind(&reqBody); err != nil {
 		log.Printf("Failed to bind request body: %v", err)
@@ -109,16 +111,36 @@ func AddReservation(c echo.Context) error {
 		reqBody.Status = "pending"
 	}
 
+	log.Println("Request body is valid")
+
 	// 予約を作成する
-	err = services.CreateReservation(reqBody.UserID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
+	reservationId, err := services.CreateReservation(reqBody.UserID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
 	if err != nil {
 		log.Printf("Error creating reservation: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to create reservation",
 		})
 	}
-
 	log.Println("Reservation created successfully")
+
+	// 予約が成功したので通知情報を作成
+	notificationMessage := "New reservation created for user " + reqBody.UserID
+	err = services.CreateNotification(reqBody.UserID, reservationId, notificationMessage)
+	if err != nil {
+		log.Printf("Error creating notification: %v", err)
+		return c.JSON(http.StatusInternalServerError, map[string]string{
+			"error": "Failed to create notification",
+		})
+	}
+	log.Println("Notification created successfully")
+
+	// Redisに通知メッセージをパブリッシュ
+	err = websocket.PublishToRedis("reservation-notifications", notificationMessage)
+	if err != nil {
+		log.Printf("Failed to publish notification to Redis: %v", err)
+	}
+	log.Println("Published reservation notification to Redis successfully")
+
 	return c.JSON(http.StatusCreated, map[string]string{
 		"message": "Reservation created successfully",
 	})
