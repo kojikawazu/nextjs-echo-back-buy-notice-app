@@ -4,6 +4,7 @@ import (
 	"backend/handlers"
 	"backend/supabase"
 	"backend/websocket"
+	"strings"
 
 	"log"
 	"net/http"
@@ -23,6 +24,8 @@ func main() {
 		log.Println("No .env file found")
 	}
 
+	allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+
 	// Supabaseクライアントの初期化
 	err = supabase.InitSupabase()
 	if err != nil {
@@ -41,8 +44,9 @@ func main() {
 	e.Use(middleware.Recover())
 	// CORSを有効化
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{os.Getenv("ALLOWED_ORIGINS")},
+		AllowOrigins: strings.Split(allowedOrigins, ","),
 		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
 	}))
 
 	// APIエンドポイントの設定
