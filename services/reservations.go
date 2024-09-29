@@ -111,14 +111,14 @@ func FetchReservationByUserId(userId string) (*models.ReservationData, error) {
 
 // 新しい予約情報をデータベースに追加する。
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
-func CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) error {
+func CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) (string, error) {
 	log.Printf("Creating new reservation for userId: %s\n", userId)
 
 	// トランザクションの開始
 	tx, err := supabase.Pool.Begin(supabase.Ctx)
 	if err != nil {
 		log.Printf("Failed to begin transaction: %v", err)
-		return err
+		return "", err
 	}
 
 	// トランザクションが成功または失敗した場合にコミットまたはロールバックを行う
@@ -137,19 +137,20 @@ func CreateReservation(userId, reservationDate string, numPeople int, specialReq
 		}
 	}()
 
+	var reservationId string
 	query := `
         INSERT INTO reservations (user_id, reservation_date, num_people, special_request, status, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+        RETURNING id
     `
 
-	// 予約情報を挿入
-	_, err = tx.Exec(supabase.Ctx, query, userId, reservationDate, numPeople, specialRequest, status)
+	// 予約情報を挿入し、IDを取得
+	err = tx.QueryRow(supabase.Ctx, query, userId, reservationDate, numPeople, specialRequest, status).Scan(&reservationId)
 	if err != nil {
 		log.Printf("Failed to create reservation: %v", err)
-		return err
+		return "", err
 	}
 
-	log.Println("Reservation created successfully")
-
-	return nil
+	log.Printf("Reservation created successfully with ID: %s", reservationId)
+	return reservationId, nil
 }
