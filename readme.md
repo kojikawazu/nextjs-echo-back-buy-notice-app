@@ -9,6 +9,7 @@
   - Echo
   - Go
   - WebSocket
+  - Redis Pub/Sub
 - DB
   - Supabase
 - Container
@@ -40,4 +41,6 @@
 
 ## URL
 
-![AWS](https://ap-northeast-1.console.aws.amazon.com/)
+- [AWS](https://ap-northeast-1.console.aws.amazon.com/)
+
+- [Supabase](https://supabase.com/)
