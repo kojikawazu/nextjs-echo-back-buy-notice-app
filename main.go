@@ -1,6 +1,7 @@
 package main
 
 import (
+	"backend/auth"
 	"backend/handlers"
 	"backend/supabase"
 	"backend/websocket"
@@ -43,10 +44,12 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	// CORSを有効化
+	// AllowCredentialsをtrueに設定すると、クライアント側でwithCredentialsをtrueに設定する必要がある
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: strings.Split(allowedOrigins, ","),
-		AllowMethods: []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
-		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
+		AllowOrigins:     strings.Split(allowedOrigins, ","),
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAuthorization},
+		AllowCredentials: true,
 	}))
 
 	// APIエンドポイントの設定
@@ -60,6 +63,9 @@ func main() {
 
 	e.GET("/api/notifications", handlers.GetNotifications)
 	e.POST("/api/notification", handlers.AddNotification)
+
+	e.POST("/api/login", auth.Login)
+	e.GET("/api/auth/check", auth.CheckAuth)
 
 	// WebSocketエンドポイントの設定
 	e.GET("/ws", websocket.HandleWebSocket)
