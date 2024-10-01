@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"backend/auth"
 	"backend/services"
 	"backend/websocket"
 	"log"
 	"net/http"
 	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 )
 
@@ -62,9 +64,34 @@ func GetReservationByUserId(c echo.Context) error {
 func AddReservation(c echo.Context) error {
 	log.Println("Creating new reservation...")
 
+	// クッキーからJWTトークンを取得
+	cookie, err := c.Cookie("token")
+	if err != nil {
+		log.Printf("Token not found in cookies")
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "Unauthorized",
+		})
+	}
+	tokenString := cookie.Value
+
+	// JWTトークンを解析してユーザーIDを取得
+	claims := &auth.Claims{}
+	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		return auth.JwtKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		log.Printf("Invalid token: %v", err)
+		return c.JSON(http.StatusUnauthorized, map[string]string{
+			"error": "Invalid token",
+		})
+	}
+
+	// JWTからユーザーIDを取得
+	userID := claims.UserID
+
 	// リクエストボディからデータを取得
 	type RequestBody struct {
-		UserID          string `json:"user_id"`          // ユーザーID
 		ReservationDate string `json:"reservation_date"` // 予約日
 		NumPeople       int    `json:"num_people"`       // 人数
 		SpecialRequest  string `json:"special_request"`  // 特別リクエスト
@@ -81,7 +108,7 @@ func AddReservation(c echo.Context) error {
 	}
 
 	// バリデーション: 必須フィールドが空でないか確認
-	if reqBody.UserID == "" || reqBody.ReservationDate == "" || reqBody.NumPeople <= 0 {
+	if reqBody.ReservationDate == "" || reqBody.NumPeople <= 0 {
 		log.Printf("UserID, reservation date, and num_people are required")
 		return c.JSON(http.StatusBadRequest, map[string]string{
 			"error": "UserID, reservation date, and num_people are required",
@@ -89,7 +116,7 @@ func AddReservation(c echo.Context) error {
 	}
 
 	// 予約日が正しいフォーマットか確認
-	_, err := time.Parse("2006-01-02 15:04:05", reqBody.ReservationDate)
+	_, err = time.Parse("2006-01-02 15:04:05", reqBody.ReservationDate)
 	if err != nil {
 		log.Printf("Invalid reservation date format: %v", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{
@@ -98,9 +125,9 @@ func AddReservation(c echo.Context) error {
 	}
 
 	// ユーザーが存在するか確認
-	existingUser, err := services.FetchUserById(reqBody.UserID)
+	existingUser, err := services.FetchUserById(userID)
 	if err != nil || existingUser == nil {
-		log.Printf("User not found: %s", reqBody.UserID)
+		log.Printf("User not found: %s", userID)
 		return c.JSON(http.StatusNotFound, map[string]string{
 			"error": "User not found",
 		})
@@ -114,7 +141,7 @@ func AddReservation(c echo.Context) error {
 	log.Println("Request body is valid")
 
 	// 予約を作成する
-	reservationId, err := services.CreateReservation(reqBody.UserID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
+	reservationId, err := services.CreateReservation(userID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
 	if err != nil {
 		log.Printf("Error creating reservation: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -124,8 +151,8 @@ func AddReservation(c echo.Context) error {
 	log.Println("Reservation created successfully")
 
 	// 予約が成功したので通知情報を作成
-	notificationMessage := "New reservation created for user " + reqBody.UserID
-	err = services.CreateNotification(reqBody.UserID, reservationId, notificationMessage)
+	notificationMessage := "New reservation created for user " + userID
+	err = services.CreateNotification(userID, reservationId, notificationMessage)
 	if err != nil {
 		log.Printf("Error creating notification: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
