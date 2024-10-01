@@ -11,6 +11,7 @@ resource "aws_secretsmanager_secret_version" "echo_env" {
     ALLOWED_ORIGINS = "${var.allowed_cors_address}",
     PORT            = "${var.ecs_port}",
     SUPABASE_URL    = "${var.supabase_url}",
+    JWT_SECRET_KEY  = "${var.jwt_secret_key}",
   })
 
   depends_on = [aws_elasticache_replication_group.redis]

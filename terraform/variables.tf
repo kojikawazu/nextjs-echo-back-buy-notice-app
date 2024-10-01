@@ -105,3 +105,7 @@ variable "allowed_cors_address" {
   type = string
 }
 
+variable "jwt_secret_key" {
+  type = string
+}
+

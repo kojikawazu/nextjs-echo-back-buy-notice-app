@@ -55,6 +55,10 @@ resource "aws_ecs_task_definition" "ecs_task_def" {
         {
           name      = "SUPABASE_URL",
           valueFrom = "${data.aws_secretsmanager_secret.echo_env.arn}:SUPABASE_URL::"
+        },
+        {
+          name      = "JWT_SECRET_KEY",
+          valueFrom = "${data.aws_secretsmanager_secret.echo_env.arn}:JWT_SECRET_KEY::"
         }
       ]
     }
