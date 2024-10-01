@@ -23,7 +23,8 @@ func init() {
 
 // ユーザー情報のペイロード
 type Claims struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
+	Username string `json:"username"`
 	jwt.StandardClaims
 }
 
@@ -77,7 +78,8 @@ func Login(c echo.Context) error {
 	// JWTトークンの作成
 	expirationTime := time.Now().Add(1 * time.Hour) // トークンの有効期限を1時間に設定
 	claims := &Claims{
-		Email: user.Email, // 取得したユーザー情報を使う
+		Email:    user.Email, // 取得したユーザー情報を使う
+		Username: user.Name,
 		StandardClaims: jwt.StandardClaims{
 			ExpiresAt: expirationTime.Unix(),
 		},
@@ -131,5 +133,25 @@ func CheckAuth(c echo.Context) error {
 
 	// 認証成功
 	utils.LogInfo(c, "Authentication successful for user: "+claims.Email)
-	return c.JSON(http.StatusOK, map[string]string{"message": "Authenticated", "user": claims.Email})
+	return c.JSON(http.StatusOK, map[string]string{
+		"message":  "Authenticated",
+		"username": claims.Username,
+		"email":    claims.Email,
+	})
+}
+
+// ログアウトエンドポイント
+func Logout(c echo.Context) error {
+	utils.LogInfo(c, "Logging out...")
+
+	// クッキーを削除するために、空のトークンと過去の有効期限を設定
+	cookie := new(http.Cookie)
+	cookie.Name = "token"
+	cookie.Value = ""
+	cookie.Expires = time.Unix(0, 0) // 有効期限を過去に設定して削除
+	cookie.HttpOnly = true
+	c.SetCookie(cookie)
+
+	utils.LogInfo(c, "User logged out and token removed from cookie")
+	return c.JSON(http.StatusOK, map[string]string{"message": "Logout successful"})
 }

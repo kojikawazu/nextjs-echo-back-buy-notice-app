@@ -66,6 +66,7 @@ func main() {
 
 	e.POST("/api/login", auth.Login)
 	e.GET("/api/auth/check", auth.CheckAuth)
+	e.POST("/api/logout", auth.Logout)
 
 	// WebSocketエンドポイントの設定
 	e.GET("/ws", websocket.HandleWebSocket)
