@@ -13,16 +13,17 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var jwtKey = []byte(os.Getenv("JWT_SECRET_KEY")) // 環境変数から読み込む
+var JwtKey = []byte(os.Getenv("JWT_SECRET_KEY")) // 環境変数から読み込む
 
 func init() {
-	if len(jwtKey) == 0 {
+	if len(JwtKey) == 0 {
 		log.Fatal("JWT_SECRET_KEY is not set in the environment")
 	}
 }
 
 // ユーザー情報のペイロード
 type Claims struct {
+	UserID   string `json:"user_id"`
 	Email    string `json:"email"`
 	Username string `json:"username"`
 	jwt.StandardClaims
@@ -78,6 +79,7 @@ func Login(c echo.Context) error {
 	// JWTトークンの作成
 	expirationTime := time.Now().Add(1 * time.Hour) // トークンの有効期限を1時間に設定
 	claims := &Claims{
+		UserID:   user.ID,
 		Email:    user.Email, // 取得したユーザー情報を使う
 		Username: user.Name,
 		StandardClaims: jwt.StandardClaims{
@@ -85,7 +87,7 @@ func Login(c echo.Context) error {
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	tokenString, err := token.SignedString(jwtKey)
+	tokenString, err := token.SignedString(JwtKey)
 	if err != nil {
 		utils.LogError(c, "Could not create JWT token: "+err.Error())
 		return c.JSON(http.StatusInternalServerError, map[string]string{"message": "Could not create token"})
@@ -118,7 +120,7 @@ func CheckAuth(c echo.Context) error {
 
 	claims := &Claims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-		return jwtKey, nil
+		return JwtKey, nil
 	})
 
 	if err != nil {
@@ -135,6 +137,7 @@ func CheckAuth(c echo.Context) error {
 	utils.LogInfo(c, "Authentication successful for user: "+claims.Email)
 	return c.JSON(http.StatusOK, map[string]string{
 		"message":  "Authenticated",
+		"user_id":  claims.UserID,
 		"username": claims.Username,
 		"email":    claims.Email,
 	})
