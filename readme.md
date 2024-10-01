@@ -41,7 +41,7 @@
 
 ## Architecture
 
-[Architecture](./diagrams/backend.drawio.png)
+![Architecture](./diagrams/backend.drawio.png)
 
 ## URL
 
