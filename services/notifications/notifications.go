@@ -1,4 +1,4 @@
-package services
+package services_notifications
 
 import (
 	"backend/models"

@@ -12,6 +12,8 @@ go get github.com/redis/go-redis/v9
 
 go get github.com/gorilla/websocket
 go get github.com/dgrijalva/jwt-go
+
+go get github.com/stretchr/testify/assert
 ```
 
 ## モジュールの整理
@@ -24,4 +26,10 @@ go mod tidy
 
 ```bash
 go run main.go
+```
+
+## テストコードの実行
+
+```bash
+JWT_SECRET_KEY=xxxxxx go test -count=1 ./...
 ```
