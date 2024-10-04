@@ -2,8 +2,6 @@ package handlers_notifications
 
 import (
 	services_notifications "backend/services/notifications"
-	services_reservations "backend/services/reservations"
-	services_users "backend/services/users"
 	"log"
 	"net/http"
 
@@ -11,16 +9,12 @@ import (
 )
 
 type NotificationHandler struct {
-	UserService         services_users.UserService
-	ReservationService  services_reservations.ReservationService
 	NotificationService services_notifications.NotificationService
 }
 
 // コンストラクタ
-func NewNotificationHandler(userService services_users.UserService, reservationService services_reservations.ReservationService, notificationService services_notifications.NotificationService) *NotificationHandler {
+func NewNotificationHandler(notificationService services_notifications.NotificationService) *NotificationHandler {
 	return &NotificationHandler{
-		UserService:         userService,
-		ReservationService:  reservationService,
 		NotificationService: notificationService,
 	}
 }
@@ -63,35 +57,18 @@ func (h *NotificationHandler) AddNotification(c echo.Context) error {
 		})
 	}
 
-	// バリデーション: 必須フィールドが空でないか確認
-	if reqBody.UserID == "" || reqBody.ReservationID == "" || reqBody.Message == "" {
-		log.Printf("UserID, ReservationID, and message are required")
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "UserID, ReservationID, and message are required",
-		})
-	}
-
-	// ユーザーの存在確認
-	existingUser, err := h.UserService.FetchUserById(reqBody.UserID)
-	if err != nil || existingUser == nil {
-		log.Printf("User not found: %s", reqBody.UserID)
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "User not found",
-		})
-	}
-
-	// 予約の存在確認（オプションだが、予約が実在するか確認したい場合）
-	existingReservation, err := h.ReservationService.FetchReservationById(reqBody.ReservationID)
-	if err != nil || existingReservation == nil {
-		log.Printf("Reservation not found: %s", reqBody.ReservationID)
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Reservation not found",
-		})
-	}
-
 	// 通知を作成
-	err = h.NotificationService.CreateNotification(reqBody.UserID, reqBody.ReservationID, reqBody.Message)
+	err := h.NotificationService.CreateNotification(reqBody.UserID, reqBody.ReservationID, reqBody.Message)
 	if err != nil {
+		if err.Error() == "user not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "User not found",
+			})
+		} else if err.Error() == "reservation not found" {
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "Reservation not found",
+			})
+		}
 		log.Printf("Error creating notification: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
 			"error": "Failed to create notification",

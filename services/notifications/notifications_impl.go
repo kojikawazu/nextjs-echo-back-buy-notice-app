@@ -1,6 +1,11 @@
 package services_notifications
 
-import "backend/models"
+import (
+	"backend/models"
+	repositories_notifications "backend/repositories/notifications"
+	services_reservations "backend/services/reservations"
+	services_users "backend/services/users"
+)
 
 // NotificationServiceインターフェース
 type NotificationService interface {
@@ -9,12 +14,20 @@ type NotificationService interface {
 }
 
 // NotificationServiceImplはNotificationServiceインターフェースを実装する
-type NotificationServiceImpl struct{}
-
-func (u *NotificationServiceImpl) FetchNotifications() ([]models.NotificationData, error) {
-	return FetchNotifications()
+type NotificationServiceImpl struct {
+	UserService            services_users.UserService
+	ReservationService     services_reservations.ReservationService
+	NotificationRepository repositories_notifications.NotificationRepository
 }
 
-func (u *NotificationServiceImpl) CreateNotification(userId, reservationId, message string) error {
-	return CreateNotification(userId, reservationId, message)
+func NewNotificationService(
+	userService services_users.UserService,
+	reservationService services_reservations.ReservationService,
+	notificationRepository repositories_notifications.NotificationRepository,
+) NotificationService {
+	return &NotificationServiceImpl{
+		UserService:            userService,
+		ReservationService:     reservationService,
+		NotificationRepository: notificationRepository,
+	}
 }

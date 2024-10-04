@@ -5,6 +5,7 @@ import (
 	handlers_notifications "backend/handlers/notifications"
 	handlers_reservations "backend/handlers/reservations"
 	handlers_users "backend/handlers/users"
+	repositories_notifications "backend/repositories/notifications"
 	services_notifications "backend/services/notifications"
 	services_reservations "backend/services/reservations"
 	services_users "backend/services/users"
@@ -57,14 +58,16 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// ServiceとHandlerの初期化
+	// RepositoryとServiceとHandlerの初期化
+	notificationRepository := repositories_notifications.NewNotificationRepository()
+
 	userService := &services_users.UserServiceImpl{}
 	reservationService := &services_reservations.ReservationServiceImpl{}
-	notificationService := &services_notifications.NotificationServiceImpl{}
+	notificationService := services_notifications.NewNotificationService(userService, reservationService, notificationRepository)
 
 	authHandler := auth.NewAuthHandler(userService)
 	userHandler := handlers_users.NewUserHandler(userService)
-	notificationHandler := handlers_notifications.NewNotificationHandler(userService, reservationService, notificationService)
+	notificationHandler := handlers_notifications.NewNotificationHandler(notificationService)
 	reservationHandler := handlers_reservations.NewReservationHandler(userService, reservationService, notificationService)
 
 	// APIエンドポイントの設定

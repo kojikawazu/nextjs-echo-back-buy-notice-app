@@ -1,4 +1,4 @@
-package handlers_notifications
+package services_notifications
 
 import (
 	"backend/models"
@@ -13,7 +13,10 @@ type MockNotificationService struct {
 
 func (m *MockNotificationService) FetchNotifications() ([]models.NotificationData, error) {
 	args := m.Called()
-	return args.Get(0).([]models.NotificationData), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).([]models.NotificationData), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockNotificationService) CreateNotification(userID, reservationID, message string) error {

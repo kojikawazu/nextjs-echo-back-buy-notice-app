@@ -4,6 +4,8 @@ import (
 	handlers_reservations "backend/handlers/reservations"
 	handlers_users "backend/handlers/users"
 	"backend/models"
+	repositories_notifications "backend/repositories/notifications"
+	services_notifications "backend/services/notifications"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,11 +22,11 @@ func TestGetNotifications(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// モックサービスをインスタンス化
-	mockUserService := &handlers_users.MockUserService{}
-	mockReservationService := &handlers_reservations.MockReservationService{}
-	mockNotificationService := &MockNotificationService{}
-	handler := NewNotificationHandler(mockUserService, mockReservationService, mockNotificationService)
+	// モックサービスのインスタンス化
+	mockNotificationService := new(services_notifications.MockNotificationService)
+
+	// NotificationHandlerのインスタンス化
+	handler := NewNotificationHandler(mockNotificationService)
 
 	// モックデータの設定
 	mockNotifications := []models.NotificationData{
@@ -56,16 +58,25 @@ func TestAddNotification(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// モックサービスをインスタンス化
-	mockUserService := &handlers_users.MockUserService{}
-	mockReservationService := &handlers_reservations.MockReservationService{}
-	mockNotificationService := &MockNotificationService{}
-	handler := NewNotificationHandler(mockUserService, mockReservationService, mockNotificationService)
+	// モックサービスとリポジトリをインスタンス化
+	mockNotificationRepository := new(repositories_notifications.MockNotificationRepository)
+	mockUserService := new(handlers_users.MockUserService)
+	mockReservationService := new(handlers_reservations.MockReservationService)
+
+	// NotificationServiceのインスタンス化
+	notificationService := services_notifications.NewNotificationService(
+		mockUserService,
+		mockReservationService,
+		mockNotificationRepository,
+	)
+
+	// ハンドラのインスタンス化
+	handler := NewNotificationHandler(notificationService)
 
 	// モックデータの設定
 	mockUserService.On("FetchUserById", "user1").Return(&models.UserData{ID: "user1", Name: "John Doe"}, nil)
 	mockReservationService.On("FetchReservationById", "reservation1").Return(&models.ReservationData{ID: "reservation1"}, nil)
-	mockNotificationService.On("CreateNotification", "user1", "reservation1", "Reservation confirmed").Return(nil)
+	mockNotificationRepository.On("CreateNotification", "user1", "reservation1", "Reservation confirmed").Return(nil)
 
 	// ハンドラーを実行
 	if assert.NoError(t, handler.AddNotification(c)) {
@@ -79,7 +90,7 @@ func TestAddNotification(t *testing.T) {
 	// モックが期待通りに呼び出されたかを確認
 	mockUserService.AssertExpectations(t)
 	mockReservationService.AssertExpectations(t)
-	mockNotificationService.AssertExpectations(t)
+	mockNotificationRepository.AssertExpectations(t)
 }
 
 func TestAddNotification_UserNotFound(t *testing.T) {
@@ -91,11 +102,20 @@ func TestAddNotification_UserNotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	// モックサービスをインスタンス化
-	mockUserService := &handlers_users.MockUserService{}
-	mockReservationService := &handlers_reservations.MockReservationService{}
-	mockNotificationService := &MockNotificationService{}
-	handler := NewNotificationHandler(mockUserService, mockReservationService, mockNotificationService)
+	// モックサービスとリポジトリをインスタンス化
+	mockNotificationRepository := new(repositories_notifications.MockNotificationRepository)
+	mockUserService := new(handlers_users.MockUserService)
+	mockReservationService := new(handlers_reservations.MockReservationService)
+
+	// NotificationServiceのインスタンス化
+	notificationService := services_notifications.NewNotificationService(
+		mockUserService,
+		mockReservationService,
+		mockNotificationRepository,
+	)
+
+	// ハンドラのインスタンス化
+	handler := NewNotificationHandler(notificationService)
 
 	// モックデータの設定
 	mockUserService.On("FetchUserById", "user1").Return(nil, nil) // ユーザーが存在しない

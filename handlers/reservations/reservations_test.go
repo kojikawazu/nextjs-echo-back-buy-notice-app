@@ -2,9 +2,9 @@ package handlers_reservations
 
 import (
 	"backend/auth"
-	handlers_notifications "backend/handlers/notifications"
 	handlers_users "backend/handlers/users"
 	"backend/models"
+	services_notifications "backend/services/notifications"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -64,7 +64,7 @@ func TestAddReservation(t *testing.T) {
 	// モックサービスをインスタンス化
 	mockReservationService := &MockReservationService{}
 	mockUserService := &handlers_users.MockUserService{}
-	mockNotificationService := &handlers_notifications.MockNotificationService{}
+	mockNotificationService := &services_notifications.MockNotificationService{}
 	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
 
 	// JWTトークンのモックを作成
@@ -111,7 +111,7 @@ func TestAddReservation_UserNotFound(t *testing.T) {
 	// モックサービスをインスタンス化
 	mockReservationService := &MockReservationService{}
 	mockUserService := &handlers_users.MockUserService{}
-	mockNotificationService := &handlers_notifications.MockNotificationService{}
+	mockNotificationService := &services_notifications.MockNotificationService{}
 	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
 
 	// JWTトークンのモックを作成
