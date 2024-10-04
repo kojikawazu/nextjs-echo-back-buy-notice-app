@@ -1,7 +1,7 @@
-package handlers
+package handlers_users
 
 import (
-	"backend/services"
+	services_users "backend/services/users"
 	"log"
 	"net/http"
 	"net/mail"
@@ -9,13 +9,24 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type UserHandler struct {
+	UserService services_users.UserService
+}
+
+// コンストラクタ
+func NewUserHandler(userService services_users.UserService) *UserHandler {
+	return &UserHandler{
+		UserService: userService,
+	}
+}
+
 // 全ユーザーを取得し、JSON形式で返すハンドラー
 // ユーザー取得に失敗した場合、500エラーを返す。
-func GetUsers(c echo.Context) error {
+func (h *UserHandler) GetUsers(c echo.Context) error {
 	log.Println("Fetching users...")
 
 	// サービス層でユーザー一覧を取得
-	users, err := services.FetchUsers()
+	users, err := h.UserService.FetchUsers()
 	if err != nil {
 		log.Printf("Error fetching users from Supabase: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -29,7 +40,7 @@ func GetUsers(c echo.Context) error {
 
 // リクエストボディで指定されたemailとpasswordでユーザーを取得する。
 // 有効なemailフォーマットかをチェックし、データベースに該当ユーザーがいない場合、404エラーを返す。
-func GetUserByEmailAndPassword(c echo.Context) error {
+func (h *UserHandler) GetUserByEmailAndPassword(c echo.Context) error {
 	log.Println("Fetching user by email and password...")
 
 	// JSONのリクエストボディからemailとpasswordを取得
@@ -64,7 +75,7 @@ func GetUserByEmailAndPassword(c echo.Context) error {
 	log.Println("Email and password are valid")
 
 	// サービス層からユーザーデータを取得
-	user, err := services.FetchUserByEmailAndPassword(reqBody.Email, reqBody.Password)
+	user, err := h.UserService.FetchUserByEmailAndPassword(reqBody.Email, reqBody.Password)
 	if err != nil {
 		log.Printf("Error fetching user: %v", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
@@ -78,7 +89,7 @@ func GetUserByEmailAndPassword(c echo.Context) error {
 
 // 新しいユーザーを追加するハンドラー
 // ユーザーが既に存在する場合、409 Conflictを返し、存在しない場合は新規作成する。
-func AddUser(c echo.Context) error {
+func (h *UserHandler) AddUser(c echo.Context) error {
 	log.Println("Creating new user...")
 
 	// リクエストボディからデータを取得
@@ -115,7 +126,7 @@ func AddUser(c echo.Context) error {
 	log.Println("Name, email and password are valid")
 
 	// 既存ユーザーの確認
-	existingUser, err := services.FetchUserByEmail(reqBody.Email)
+	existingUser, err := h.UserService.FetchUserByEmail(reqBody.Email)
 	if err == nil && existingUser != nil {
 		// ユーザーが既に存在する場合はスキップ
 		log.Printf("User already exists: %v", existingUser)
@@ -126,7 +137,7 @@ func AddUser(c echo.Context) error {
 	log.Println("User does not exist")
 
 	// 新規ユーザーを作成
-	err = services.CreateUser(reqBody.Name, reqBody.Email, reqBody.Password)
+	err = h.UserService.CreateUser(reqBody.Name, reqBody.Email, reqBody.Password)
 	if err != nil {
 		log.Printf("Error creating user: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{

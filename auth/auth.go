@@ -1,7 +1,7 @@
 package auth
 
 import (
-	"backend/services"
+	services_users "backend/services/users"
 	"backend/utils"
 	"log"
 	"net/http"
@@ -29,8 +29,19 @@ type Claims struct {
 	jwt.StandardClaims
 }
 
+type AuthHandler struct {
+	UserService services_users.UserService
+}
+
+// コンストラクタ
+func NewAuthHandler(userService services_users.UserService) *AuthHandler {
+	return &AuthHandler{
+		UserService: userService,
+	}
+}
+
 // ログインエンドポイント（JWTトークンの発行）
-func Login(c echo.Context) error {
+func (h *AuthHandler) Login(c echo.Context) error {
 	utils.LogInfo(c, "Logging in...")
 
 	// JSONのリクエストボディからemailとpasswordを取得
@@ -65,7 +76,7 @@ func Login(c echo.Context) error {
 	utils.LogInfo(c, "Email and password are valid")
 
 	// サービス層からユーザーデータを取得
-	user, err := services.FetchUserByEmailAndPassword(reqBody.Email, reqBody.Password)
+	user, err := h.UserService.FetchUserByEmailAndPassword(reqBody.Email, reqBody.Password)
 	if err != nil {
 		utils.LogError(c, "Error fetching user: "+err.Error())
 		return c.JSON(http.StatusNotFound, map[string]string{
@@ -107,7 +118,7 @@ func Login(c echo.Context) error {
 }
 
 // 認証確認エンドポイント
-func CheckAuth(c echo.Context) error {
+func (h *AuthHandler) CheckAuth(c echo.Context) error {
 	utils.LogInfo(c, "Checking authentication...")
 
 	// クッキーからJWTトークンを取得
@@ -144,7 +155,7 @@ func CheckAuth(c echo.Context) error {
 }
 
 // ログアウトエンドポイント
-func Logout(c echo.Context) error {
+func (h *AuthHandler) Logout(c echo.Context) error {
 	utils.LogInfo(c, "Logging out...")
 
 	// クッキーを削除するために、空のトークンと過去の有効期限を設定

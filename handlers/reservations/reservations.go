@@ -1,8 +1,10 @@
-package handlers
+package handlers_reservations
 
 import (
 	"backend/auth"
-	"backend/services"
+	services_notifications "backend/services/notifications"
+	services_reservations "backend/services/reservations"
+	services_users "backend/services/users"
 	"backend/websocket"
 	"log"
 	"net/http"
@@ -12,13 +14,28 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type ReservationHandler struct {
+	UserService         services_users.UserService
+	ReservationService  services_reservations.ReservationService
+	NotificationService services_notifications.NotificationService
+}
+
+// コンストラクタ
+func NewReservationHandler(userService services_users.UserService, reservationService services_reservations.ReservationService, notificationService services_notifications.NotificationService) *ReservationHandler {
+	return &ReservationHandler{
+		UserService:         userService,
+		ReservationService:  reservationService,
+		NotificationService: notificationService,
+	}
+}
+
 // 全予約情報を取得し、JSON形式で返すハンドラー
 // 予約情報取得に失敗した場合、500エラーを返す。
-func GetReservations(c echo.Context) error {
+func (h *ReservationHandler) GetReservations(c echo.Context) error {
 	log.Println("Fetching reservations...")
 
 	// サービス層で予約情報一覧を取得
-	reservations, err := services.FetchReservations()
+	reservations, err := h.ReservationService.FetchReservations()
 	if err != nil {
 		log.Printf("Error fetching reservations from Supabase: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -32,7 +49,7 @@ func GetReservations(c echo.Context) error {
 
 // パスパラメータで指定されたユーザーIDで予約情報を取得する。
 // データベースに該当予約情報がいない場合、404エラーを返す。
-func GetReservationByUserId(c echo.Context) error {
+func (h *ReservationHandler) GetReservationByUserId(c echo.Context) error {
 	log.Println("Fetching reservation by userId...")
 
 	// パスパラメータからuserIdを取得
@@ -48,7 +65,7 @@ func GetReservationByUserId(c echo.Context) error {
 	log.Println("userId is valid")
 
 	// サービス層からユーザーデータを取得
-	reservation, err := services.FetchReservationByUserId(userId)
+	reservation, err := h.ReservationService.FetchReservationByUserId(userId)
 	if err != nil {
 		log.Printf("Error fetching reservation: %v", err)
 		return c.JSON(http.StatusNotFound, map[string]string{
@@ -61,7 +78,7 @@ func GetReservationByUserId(c echo.Context) error {
 }
 
 // 新しい予約情報を追加するハンドラー
-func AddReservation(c echo.Context) error {
+func (h *ReservationHandler) AddReservation(c echo.Context) error {
 	log.Println("Creating new reservation...")
 
 	// クッキーからJWTトークンを取得
@@ -125,7 +142,7 @@ func AddReservation(c echo.Context) error {
 	}
 
 	// ユーザーが存在するか確認
-	existingUser, err := services.FetchUserById(userID)
+	existingUser, err := h.UserService.FetchUserById(userID)
 	if err != nil || existingUser == nil {
 		log.Printf("User not found: %s", userID)
 		return c.JSON(http.StatusNotFound, map[string]string{
@@ -141,7 +158,7 @@ func AddReservation(c echo.Context) error {
 	log.Println("Request body is valid")
 
 	// 予約を作成する
-	reservationId, err := services.CreateReservation(userID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
+	reservationId, err := h.ReservationService.CreateReservation(userID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
 	if err != nil {
 		log.Printf("Error creating reservation: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{
@@ -152,7 +169,7 @@ func AddReservation(c echo.Context) error {
 
 	// 予約が成功したので通知情報を作成
 	notificationMessage := "New reservation created for user " + userID
-	err = services.CreateNotification(userID, reservationId, notificationMessage)
+	err = h.NotificationService.CreateNotification(userID, reservationId, notificationMessage)
 	if err != nil {
 		log.Printf("Error creating notification: %v", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{

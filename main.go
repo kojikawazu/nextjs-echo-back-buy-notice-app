@@ -2,7 +2,13 @@ package main
 
 import (
 	"backend/auth"
-	"backend/handlers"
+	handlers_notifications "backend/handlers/notifications"
+	handlers_reservations "backend/handlers/reservations"
+	handlers_users "backend/handlers/users"
+	repositories_notifications "backend/repositories/notifications"
+	services_notifications "backend/services/notifications"
+	services_reservations "backend/services/reservations"
+	services_users "backend/services/users"
 	"backend/supabase"
 	"backend/websocket"
 	"strings"
@@ -52,21 +58,33 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// RepositoryとServiceとHandlerの初期化
+	notificationRepository := repositories_notifications.NewNotificationRepository()
+
+	userService := &services_users.UserServiceImpl{}
+	reservationService := &services_reservations.ReservationServiceImpl{}
+	notificationService := services_notifications.NewNotificationService(userService, reservationService, notificationRepository)
+
+	authHandler := auth.NewAuthHandler(userService)
+	userHandler := handlers_users.NewUserHandler(userService)
+	notificationHandler := handlers_notifications.NewNotificationHandler(notificationService)
+	reservationHandler := handlers_reservations.NewReservationHandler(userService, reservationService, notificationService)
+
 	// APIエンドポイントの設定
-	e.GET("/api/users", handlers.GetUsers)
-	e.POST("/api/user", handlers.GetUserByEmailAndPassword)
-	e.POST("/api/user/add", handlers.AddUser)
+	e.GET("/api/users", userHandler.GetUsers)
+	e.POST("/api/user", userHandler.GetUserByEmailAndPassword)
+	e.POST("/api/user/add", userHandler.AddUser)
 
-	e.GET("/api/reservations", handlers.GetReservations)
-	e.GET("/api/reservations/:user_id", handlers.GetReservationByUserId)
-	e.POST("/api/reservation", handlers.AddReservation)
+	e.GET("/api/reservations", reservationHandler.GetReservations)
+	e.GET("/api/reservations/:user_id", reservationHandler.GetReservationByUserId)
+	e.POST("/api/reservation", reservationHandler.AddReservation)
 
-	e.GET("/api/notifications", handlers.GetNotifications)
-	e.POST("/api/notification", handlers.AddNotification)
+	e.GET("/api/notifications", notificationHandler.GetNotifications)
+	e.POST("/api/notification", notificationHandler.AddNotification)
 
-	e.POST("/api/login", auth.Login)
-	e.GET("/api/auth/check", auth.CheckAuth)
-	e.POST("/api/logout", auth.Logout)
+	e.POST("/api/login", authHandler.Login)
+	e.GET("/api/auth/check", authHandler.CheckAuth)
+	e.POST("/api/logout", authHandler.Logout)
 
 	// WebSocketエンドポイントの設定
 	e.GET("/ws", websocket.HandleWebSocket)

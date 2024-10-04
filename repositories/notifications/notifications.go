@@ -1,4 +1,4 @@
-package services
+package repositories_notifications
 
 import (
 	"backend/models"
@@ -9,7 +9,7 @@ import (
 
 // Supabaseから全通知情報を取得し、通知情報リストを返す。
 // 失敗した場合はエラーを返す。
-func FetchNotifications() ([]models.NotificationData, error) {
+func (r *NotificationRepositoryImpl) FetchNotifications() ([]models.NotificationData, error) {
 	log.Println("Fetching notifications from Supabase...")
 
 	query := `
@@ -57,7 +57,7 @@ func FetchNotifications() ([]models.NotificationData, error) {
 
 // 新しい通知をデータベースに追加する。
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
-func CreateNotification(userId, reservationId, message string) error {
+func (r *NotificationRepositoryImpl) CreateNotification(userId, reservationId, message string) error {
 	log.Printf("Creating new notification for userId: %s\n", userId)
 
 	// トランザクションの開始
