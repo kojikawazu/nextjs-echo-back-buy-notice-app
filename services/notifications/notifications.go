@@ -17,23 +17,30 @@ func (s *NotificationServiceImpl) FetchNotifications() ([]models.NotificationDat
 func (s *NotificationServiceImpl) CreateNotification(userId, reservationId, message string) error {
 	// バリデーション: 必須フィールドが空でないか確認
 	if userId == "" || reservationId == "" || message == "" {
-		log.Printf("userID, ReservationID, and message are required")
+		log.Printf("UserID, ReservationID, and message are required")
 		return errors.New("userID, ReservationID, and message are required")
 	}
 
 	// ユーザーの存在確認
-	existingUser, err := s.UserService.FetchUserById(userId)
+	existingUser, err := s.UserRepository.FetchUserById(userId)
 	if err != nil || existingUser == nil {
-		log.Printf("user not found: %s", userId)
+		log.Printf("User not found: %s", userId)
 		return errors.New("user not found")
 	}
 
 	// 予約の存在確認（オプションだが、予約が実在するか確認したい場合）
-	existingReservation, err := s.ReservationService.FetchReservationById(reservationId)
+	existingReservation, err := s.ReservationRepository.FetchReservationById(reservationId)
 	if err != nil || existingReservation == nil {
-		log.Printf("reservation not found: %s", reservationId)
+		log.Printf("Reservation not found: %s", reservationId)
 		return errors.New("reservation not found")
 	}
 
-	return s.NotificationRepository.CreateNotification(userId, reservationId, message)
+	err = s.NotificationRepository.CreateNotification(userId, reservationId, message)
+	if err != nil {
+		log.Printf("Error creating notification: %v", err)
+		return errors.New("failed to create notification")
+	}
+
+	log.Println("Notification created successfully")
+	return nil
 }
