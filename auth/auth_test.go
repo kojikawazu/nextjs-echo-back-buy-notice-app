@@ -1,8 +1,8 @@
 package auth
 
 import (
-	handlers_users "backend/handlers/users"
 	"backend/models"
+	services_users "backend/services/users"
 	"bytes"
 	"net/http"
 	"net/http/httptest"
@@ -36,7 +36,7 @@ func TestLogin(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	mockUserService := new(handlers_users.MockUserService)
+	mockUserService := new(services_users.MockUserService)
 	handler := NewAuthHandler(mockUserService)
 
 	// Mockの設定
@@ -57,7 +57,7 @@ func TestLogout(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	handler := NewAuthHandler(new(handlers_users.MockUserService))
+	handler := NewAuthHandler(new(services_users.MockUserService))
 
 	// テスト実行
 	if assert.NoError(t, handler.Logout(c)) {

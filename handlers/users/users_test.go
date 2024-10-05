@@ -2,6 +2,8 @@ package handlers_users
 
 import (
 	"backend/models"
+	services_users "backend/services/users"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -19,7 +21,7 @@ func TestGetUsers(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &MockUserService{}
+	mockService := &services_users.MockUserService{}
 	handler := NewUserHandler(mockService)
 
 	// モックの挙動を設定
@@ -50,7 +52,7 @@ func TestGetUserByEmailAndPassword(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &MockUserService{}
+	mockService := &services_users.MockUserService{}
 	handler := NewUserHandler(mockService)
 
 	// モックデータの設定
@@ -84,7 +86,7 @@ func TestAddUser(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &MockUserService{}
+	mockService := &services_users.MockUserService{}
 	handler := NewUserHandler(mockService)
 
 	// サービス側でのモックの挙動を設定
@@ -111,12 +113,11 @@ func TestAddUserAlreadyExists(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &MockUserService{}
+	mockService := &services_users.MockUserService{}
 	handler := NewUserHandler(mockService)
 
 	// サービス側でのモックの挙動を設定
-	existingUser := &models.UserData{Name: "John Doe", Email: "john@example.com"}
-	mockService.On("FetchUserByEmail", "john@example.com").Return(existingUser, nil) // ユーザーが既に存在する
+	mockService.On("CreateUser", "John Doe", "john@example.com", "password123").Return(errors.New("user already exists"))
 
 	// ハンドラーを実行
 	if assert.NoError(t, handler.AddUser(c)) {
@@ -126,4 +127,7 @@ func TestAddUserAlreadyExists(t *testing.T) {
 		// レスポンス内容の確認
 		assert.Contains(t, rec.Body.String(), "User already exists")
 	}
+
+	// モックが期待通りに呼び出されたかを確認
+	mockService.AssertExpectations(t)
 }
