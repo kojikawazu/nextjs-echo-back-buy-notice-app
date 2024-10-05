@@ -3,6 +3,7 @@ package repositories_reservations
 import (
 	"backend/models"
 	"backend/supabase"
+	"errors"
 	"log"
 )
 
@@ -113,6 +114,12 @@ func (r *ReservationRepositoryImpl) FetchReservationByUserId(userId string) (*mo
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
 func (r *ReservationRepositoryImpl) CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) (string, error) {
 	log.Printf("Creating new reservation for userId: %s\n", userId)
+
+	// バリデーション: 必須フィールドが空でないか確認
+	if reservationDate == "" || numPeople <= 0 || userId == "" || status == "" || specialRequest == "" {
+		log.Printf("UserID, reservation date, and num_people are required")
+		return "", errors.New("userID, reservation date, and num_people are required")
+	}
 
 	// トランザクションの開始
 	tx, err := supabase.Pool.Begin(supabase.Ctx)

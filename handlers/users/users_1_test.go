@@ -32,14 +32,17 @@ func TestHandler_GetUsers(t *testing.T) {
 	mockService.On("FetchUsers").Return(mockUsers, nil)
 
 	// ハンドラーを実行
-	if assert.NoError(t, handler.GetUsers(c)) {
-		// ステータスコードの確認
-		assert.Equal(t, http.StatusOK, rec.Code)
+	handler.GetUsers(c)
 
-		// レスポンス内容の確認
-		assert.Contains(t, rec.Body.String(), "John Doe")
-		assert.Contains(t, rec.Body.String(), "Jane Doe")
-	}
+	// ステータスコードの確認
+	assert.Equal(t, http.StatusOK, rec.Code)
+
+	// レスポンス内容の確認
+	assert.Contains(t, rec.Body.String(), "John Doe")
+	assert.Contains(t, rec.Body.String(), "Jane Doe")
+
+	// モックが期待通りに呼び出されたかを確認
+	mockService.AssertExpectations(t)
 }
 
 func TestHandler_GetUsers_ServiceError(t *testing.T) {
@@ -63,6 +66,9 @@ func TestHandler_GetUsers_ServiceError(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, http.StatusInternalServerError, rec.Code)
 	assert.Contains(t, rec.Body.String(), "Failed to fetch users")
+
+	// モックが期待通りに呼び出されたかを確認
+	mockService.AssertExpectations(t)
 }
 
 func TestHandler_GetUsers_NoUsers(t *testing.T) {
