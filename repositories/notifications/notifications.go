@@ -3,6 +3,7 @@ package repositories_notifications
 import (
 	"backend/models"
 	"backend/supabase"
+	"errors"
 	"log"
 	"time"
 )
@@ -59,6 +60,12 @@ func (r *NotificationRepositoryImpl) FetchNotifications() ([]models.Notification
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
 func (r *NotificationRepositoryImpl) CreateNotification(userId, reservationId, message string) error {
 	log.Printf("Creating new notification for userId: %s\n", userId)
+
+	// バリデーション: 必須フィールドが空でないか確認
+	if userId == "" || reservationId == "" || message == "" {
+		log.Printf("UserID, ReservationID, and message are required")
+		return errors.New("userID, ReservationID, and message are required")
+	}
 
 	// トランザクションの開始
 	tx, err := supabase.Pool.Begin(supabase.Ctx)
