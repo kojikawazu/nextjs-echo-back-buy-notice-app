@@ -13,7 +13,10 @@ type MockReservationService struct {
 
 func (m *MockReservationService) FetchReservations() ([]models.ReservationData, error) {
 	args := m.Called()
-	return args.Get(0).([]models.ReservationData), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).([]models.ReservationData), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockReservationService) FetchReservationById(id string) (*models.ReservationData, error) {

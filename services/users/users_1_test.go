@@ -135,6 +135,7 @@ func TestService_FetchUserById_InvalidCases(t *testing.T) {
 	// 異常系: ユーザーが見つからない場合
 	mockUserRepository.On("FetchUserById", "2").Return(nil, sql.ErrNoRows)
 
+	// ユーザーが見つからない場合のテスト
 	user, err := userService.FetchUserById("2")
 	assert.Error(t, err)
 	assert.Nil(t, user)
@@ -171,6 +172,7 @@ func TestService_FetchUserByEmail_InvalidCases(t *testing.T) {
 	// 異常系: ユーザーが見つからない場合
 	mockUserRepository.On("FetchUserByEmail", "unknown@example.com").Return(nil, sql.ErrNoRows)
 
+	// ユーザーが見つからない場合のテスト
 	user, err := userService.FetchUserByEmail("unknown@example.com")
 	assert.Error(t, err)
 	assert.Nil(t, user)

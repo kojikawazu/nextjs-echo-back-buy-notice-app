@@ -77,14 +77,15 @@ func TestHandler_GetUsers_NoUsers(t *testing.T) {
 	handler := NewUserHandler(mockService)
 
 	// サービスがエラーを返すようにモックの挙動を設定
-	mockService.On("FetchUsers").Return([]models.UserData(nil), errors.New("database error"))
+	mockService.On("FetchUsers").Return([]models.UserData{}, nil)
 
 	// ハンドラーを実行
 	handler.GetUsers(c)
 
 	// ステータスコードとレスポンス内容の確認
-	assert.Equal(t, http.StatusInternalServerError, rec.Code)
-	assert.Contains(t, rec.Body.String(), "Failed to fetch users")
+	assert.Equal(t, http.StatusOK, rec.Code)
+	// レスポンスが空の配列であることを確認
+	assert.JSONEq(t, "[]", rec.Body.String())
 
 	// モックが期待通りに呼び出されたかを確認
 	mockService.AssertExpectations(t)

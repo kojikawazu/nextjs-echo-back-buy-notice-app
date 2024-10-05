@@ -61,6 +61,10 @@ func (h *NotificationHandler) AddNotification(c echo.Context) error {
 	err := h.NotificationService.CreateNotification(reqBody.UserID, reqBody.ReservationID, reqBody.Message)
 	if err != nil {
 		switch err.Error() {
+		case "userID, ReservationID, and message are required":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "UserID, ReservationID, and message are required",
+			})
 		case "user not found":
 			return c.JSON(http.StatusNotFound, map[string]string{
 				"error": "User not found",
@@ -74,7 +78,7 @@ func (h *NotificationHandler) AddNotification(c echo.Context) error {
 				"error": "Failed to create notification",
 			})
 		default:
-			log.Printf("Failed to create reservation: %v", err)
+			log.Printf("failed to create reservation: %v", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{
 				"error": "Failed to create reservation",
 			})
