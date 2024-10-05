@@ -3,6 +3,7 @@ package repositories_users
 import (
 	"backend/models"
 	"backend/supabase"
+	"errors"
 	"log"
 )
 
@@ -145,6 +146,12 @@ func (r *UserRepositoryImpl) FetchUserByEmail(email string) (*models.UserData, e
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
 func (r *UserRepositoryImpl) CreateUser(name, email, password string) error {
 	log.Printf("Creating new user with email: %s\n", email)
+
+	// バリデーション: 名前、Email、パスワードが空でないかを確認
+	if name == "" || email == "" || password == "" {
+		log.Printf("Name, email and password are required")
+		return errors.New("name, email and password are required")
+	}
 
 	// トランザクションの開始
 	tx, err := supabase.Pool.Begin(supabase.Ctx)

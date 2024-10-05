@@ -13,7 +13,10 @@ type MockUserService struct {
 
 func (m *MockUserService) FetchUsers() ([]models.UserData, error) {
 	args := m.Called()
-	return args.Get(0).([]models.UserData), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).([]models.UserData), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *MockUserService) FetchUserByEmailAndPassword(email, password string) (*models.UserData, error) {
