@@ -67,7 +67,7 @@ func main() {
 
 	userService := services_users.NewUserService(userRepository)
 	reservationService := services_reservations.NewReservationService(userRepository, reservationRepository)
-	notificationService := services_notifications.NewNotificationService(userService, reservationService, notificationRepository)
+	notificationService := services_notifications.NewNotificationService(userRepository, reservationRepository, notificationRepository)
 
 	authHandler := auth.NewAuthHandler(userService)
 	userHandler := handlers_users.NewUserHandler(userService)
