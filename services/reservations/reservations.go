@@ -2,155 +2,79 @@ package services_reservations
 
 import (
 	"backend/models"
-	"backend/supabase"
+	"errors"
 	"log"
+	"time"
 )
 
 // Supabaseから全予約情報を取得し、予約情報リストを返す。
 // 失敗した場合はエラーを返す。
-func FetchReservations() ([]models.ReservationData, error) {
-	log.Println("Fetching reservations from Supabase...")
-
-	query := `
-        SELECT id, user_id, reservation_date, num_people, special_request, status, created_at, updated_at
-        FROM reservations
-        ORDER BY created_at DESC
-    `
-
-	// Supabaseからクエリを実行し、全予約情報を取得
-	rows, err := supabase.Pool.Query(supabase.Ctx, query)
-	if err != nil {
-		log.Printf("Failed to fetch reservations: %v", err)
-		return nil, err
-	}
-	log.Println("Fetched reservations successfully")
-	defer rows.Close()
-
-	var reservations []models.ReservationData
-
-	// 結果をスキャンしてユーザーデータをリストに追加
-	for rows.Next() {
-		var reservation models.ReservationData
-		err := rows.Scan(
-			&reservation.ID,
-			&reservation.UserId,
-			&reservation.ReservationDate,
-			&reservation.NumPeople,
-			&reservation.SpecialRequest,
-			&reservation.Status,
-			&reservation.CreatedAt,
-			&reservation.UpdatedAt,
-		)
-		if err != nil {
-			log.Printf("Failed to scan reservation: %v", err)
-			return nil, err
-		}
-		reservations = append(reservations, reservation)
-	}
-
-	if rows.Err() != nil {
-		log.Printf("Failed to fetch reservations: %v", rows.Err())
-		return nil, rows.Err()
-	}
-
-	log.Printf("Fetched %d reservations", len(reservations))
-	return reservations, nil
+func (s *ReservationServiceImpl) FetchReservations() ([]models.ReservationData, error) {
+	return s.ReservationRepository.FetchReservations()
 }
 
 // 指定されたIDに対応する予約情報を取得する。
 // 予約情報が見つからない場合、エラーを返す。
-func FetchReservationById(id string) (*models.ReservationData, error) {
-	log.Printf("Checking if reservation exists with id: %s\n", id)
-
-	query := `
-        SELECT id, user_id, reservation_date, num_people, special_request, status, created_at, updated_at
-        FROM reservations
-        WHERE id = $1
-    `
-
-	// Supabaseからクエリを実行し、条件に一致する予約情報を取得
-	row := supabase.Pool.QueryRow(supabase.Ctx, query, id)
-
-	// 取得した結果をスキャン
-	var reservation models.ReservationData
-	err := row.Scan(&reservation.ID, &reservation.UserId, &reservation.ReservationDate, &reservation.NumPeople, &reservation.SpecialRequest, &reservation.Status, &reservation.CreatedAt, &reservation.UpdatedAt)
-	if err != nil {
-		log.Printf("Reservation not found or error fetching reservation: %v", err)
-		return nil, err
-	}
-
-	log.Printf("Reservation found: %v", reservation)
-	return &reservation, nil
+func (s *ReservationServiceImpl) FetchReservationById(id string) (*models.ReservationData, error) {
+	return s.ReservationRepository.FetchReservationById(id)
 }
 
 // 指定されたユーザーIDに対応する予約情報を取得する。
 // 予約情報が見つからない場合、エラーを返す。
-func FetchReservationByUserId(userId string) (*models.ReservationData, error) {
-	log.Printf("Checking if reservation exists with userId: %s\n", userId)
+func (s *ReservationServiceImpl) FetchReservationByUserId(userId string) (*models.ReservationData, error) {
+	// バリデーション：userIdが空でないことを確認
+	if userId == "" {
+		log.Printf("userId is required")
+		return nil, errors.New("userId is required")
+	}
+	log.Println("userId is valid")
 
-	query := `
-        SELECT id, user_id, reservation_date, num_people, special_request, status, created_at, updated_at
-        FROM reservations
-        WHERE user_id = $1
-    `
-
-	// Supabaseからクエリを実行し、条件に一致する予約情報を取得
-	row := supabase.Pool.QueryRow(supabase.Ctx, query, userId)
-
-	// 取得した結果をスキャン
-	var reservation models.ReservationData
-	err := row.Scan(&reservation.ID, &reservation.UserId, &reservation.ReservationDate, &reservation.NumPeople, &reservation.SpecialRequest, &reservation.Status, &reservation.CreatedAt, &reservation.UpdatedAt)
+	// サービス層からユーザーデータを取得
+	reservation, err := s.ReservationRepository.FetchReservationByUserId(userId)
 	if err != nil {
-		log.Printf("Reservation not found or error fetching reservation: %v", err)
-		return nil, err
+		log.Printf("Error fetching reservation: %v", err)
+		return nil, errors.New("reservation not found")
 	}
 
-	log.Printf("Reservation found: %v", reservation)
-	return &reservation, nil
+	return reservation, nil
 }
 
 // 新しい予約情報をデータベースに追加する。
 // 成功した場合はnilを返し、失敗した場合はエラーを返す。
-func CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) (string, error) {
-	log.Printf("Creating new reservation for userId: %s\n", userId)
-
-	// トランザクションの開始
-	tx, err := supabase.Pool.Begin(supabase.Ctx)
-	if err != nil {
-		log.Printf("Failed to begin transaction: %v", err)
-		return "", err
+func (s *ReservationServiceImpl) CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) (string, error) {
+	// バリデーション: 必須フィールドが空でないか確認
+	if reservationDate == "" || numPeople <= 0 {
+		log.Printf("UserID, reservation date, and num_people are required")
+		return "", errors.New("userID, reservation date, and num_people are required")
 	}
 
-	// トランザクションが成功または失敗した場合にコミットまたはロールバックを行う
-	defer func() {
-		if err != nil {
-			log.Println("Rolling back transaction...")
-			if rollbackErr := tx.Rollback(supabase.Ctx); rollbackErr != nil {
-				log.Printf("Failed to rollback transaction: %v", rollbackErr)
-			}
-			return
-		}
-
-		log.Println("Committing transaction...")
-		if commitErr := tx.Commit(supabase.Ctx); commitErr != nil {
-			log.Printf("Failed to commit transaction: %v", commitErr)
-		}
-	}()
-
-	var reservationId string
-	query := `
-        INSERT INTO reservations (user_id, reservation_date, num_people, special_request, status, created_at, updated_at)
-        VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
-        RETURNING id
-    `
-
-	// 予約情報を挿入し、IDを取得
-	err = tx.QueryRow(supabase.Ctx, query, userId, reservationDate, numPeople, specialRequest, status).Scan(&reservationId)
+	// 予約日が正しいフォーマットか確認
+	_, err := time.Parse("2006-01-02 15:04:05", reservationDate)
 	if err != nil {
-		log.Printf("Failed to create reservation: %v", err)
-		return "", err
+		log.Printf("Invalid reservation date format: %v", err)
+		return "", errors.New("invalid reservation date format. Use 'YYYY-MM-DD HH:MM:SS'")
 	}
 
-	log.Printf("Reservation created successfully with ID: %s", reservationId)
+	// ユーザーが存在するか確認
+	existingUser, err := s.UserRepository.FetchUserById(userId)
+	if err != nil || existingUser == nil {
+		log.Printf("User not found: %s", userId)
+		return "", errors.New("user not found")
+	}
+
+	// ステータスが指定されていない場合、デフォルトで"pending"とする
+	if status == "" {
+		status = "pending"
+	}
+
+	log.Println("Request body is valid")
+
+	// 予約を作成する
+	reservationId, err := s.ReservationRepository.CreateReservation(userId, reservationDate, numPeople, specialRequest, status)
+	if err != nil {
+		log.Printf("Error creating reservation: %v", err)
+		return "", errors.New("failed to create reservation")
+	}
+
 	return reservationId, nil
 }

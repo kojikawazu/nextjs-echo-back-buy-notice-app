@@ -1,6 +1,10 @@
 package services_reservations
 
-import "backend/models"
+import (
+	"backend/models"
+	repositories_reservations "backend/repositories/reservations"
+	repositories_users "backend/repositories/users"
+)
 
 // ReservationServiceインターフェース
 type ReservationService interface {
@@ -11,20 +15,17 @@ type ReservationService interface {
 }
 
 // ReservationServiceImplはReservationServiceインターフェースを実装する
-type ReservationServiceImpl struct{}
-
-func (u *ReservationServiceImpl) FetchReservations() ([]models.ReservationData, error) {
-	return FetchReservations()
+type ReservationServiceImpl struct {
+	UserRepository        repositories_users.UserRepository
+	ReservationRepository repositories_reservations.ReservationRepository
 }
 
-func (u *ReservationServiceImpl) FetchReservationById(id string) (*models.ReservationData, error) {
-	return FetchReservationById(id)
-}
-
-func (u *ReservationServiceImpl) FetchReservationByUserId(userId string) (*models.ReservationData, error) {
-	return FetchReservationByUserId(userId)
-}
-
-func (u *ReservationServiceImpl) CreateReservation(userId, reservationDate string, numPeople int, specialRequest, status string) (string, error) {
-	return CreateReservation(userId, reservationDate, numPeople, specialRequest, status)
+func NewReservationService(
+	userRepository repositories_users.UserRepository,
+	reservationRepository repositories_reservations.ReservationRepository,
+) ReservationService {
+	return &ReservationServiceImpl{
+		UserRepository:        userRepository,
+		ReservationRepository: reservationRepository,
+	}
 }

@@ -8,7 +8,6 @@ import (
 	"backend/websocket"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
@@ -55,22 +54,24 @@ func (h *ReservationHandler) GetReservationByUserId(c echo.Context) error {
 	// パスパラメータからuserIdを取得
 	userId := c.Param("user_id")
 
-	// バリデーション：userIdが空でないことを確認
-	if userId == "" {
-		log.Printf("userId is required")
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "userId is required",
-		})
-	}
-	log.Println("userId is valid")
-
 	// サービス層からユーザーデータを取得
 	reservation, err := h.ReservationService.FetchReservationByUserId(userId)
 	if err != nil {
-		log.Printf("Error fetching reservation: %v", err)
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "Reservation not found",
-		})
+		switch err.Error() {
+		case "userId is required":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "UserId is required",
+			})
+		case "reservation not found":
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "Reservation not found",
+			})
+		default:
+			log.Printf("Failed to not reservation: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to not reservation",
+			})
+		}
 	}
 
 	log.Println("Fetched reservation successfully")
@@ -124,47 +125,34 @@ func (h *ReservationHandler) AddReservation(c echo.Context) error {
 		})
 	}
 
-	// バリデーション: 必須フィールドが空でないか確認
-	if reqBody.ReservationDate == "" || reqBody.NumPeople <= 0 {
-		log.Printf("UserID, reservation date, and num_people are required")
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "UserID, reservation date, and num_people are required",
-		})
-	}
-
-	// 予約日が正しいフォーマットか確認
-	_, err = time.Parse("2006-01-02 15:04:05", reqBody.ReservationDate)
-	if err != nil {
-		log.Printf("Invalid reservation date format: %v", err)
-		return c.JSON(http.StatusBadRequest, map[string]string{
-			"error": "Invalid reservation date format. Use 'YYYY-MM-DD HH:MM:SS'",
-		})
-	}
-
-	// ユーザーが存在するか確認
-	existingUser, err := h.UserService.FetchUserById(userID)
-	if err != nil || existingUser == nil {
-		log.Printf("User not found: %s", userID)
-		return c.JSON(http.StatusNotFound, map[string]string{
-			"error": "User not found",
-		})
-	}
-
-	// ステータスが指定されていない場合、デフォルトで"pending"とする
-	if reqBody.Status == "" {
-		reqBody.Status = "pending"
-	}
-
-	log.Println("Request body is valid")
-
 	// 予約を作成する
 	reservationId, err := h.ReservationService.CreateReservation(userID, reqBody.ReservationDate, reqBody.NumPeople, reqBody.SpecialRequest, reqBody.Status)
 	if err != nil {
-		log.Printf("Error creating reservation: %v", err)
-		return c.JSON(http.StatusInternalServerError, map[string]string{
-			"error": "Failed to create reservation",
-		})
+		switch err.Error() {
+		case "userID, reservation date, and num_people are required":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "UserID, reservation date, and num_people are required",
+			})
+		case "invalid reservation date format. Use 'YYYY-MM-DD HH:MM:SS'":
+			return c.JSON(http.StatusBadRequest, map[string]string{
+				"error": "Invalid reservation date format. Use 'YYYY-MM-DD HH:MM:SS'",
+			})
+		case "user not found":
+			return c.JSON(http.StatusNotFound, map[string]string{
+				"error": "User not found",
+			})
+		case "failed to create reservation":
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to create reservation",
+			})
+		default:
+			log.Printf("Failed to create reservation: %v", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{
+				"error": "Failed to create reservation",
+			})
+		}
 	}
+
 	log.Println("Reservation created successfully")
 
 	// 予約が成功したので通知情報を作成

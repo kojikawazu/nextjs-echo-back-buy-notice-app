@@ -1,4 +1,4 @@
-package handlers_reservations
+package services_reservations
 
 import (
 	"backend/models"

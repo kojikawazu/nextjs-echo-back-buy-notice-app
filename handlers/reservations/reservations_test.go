@@ -4,7 +4,8 @@ import (
 	"backend/auth"
 	"backend/models"
 	services_notifications "backend/services/notifications"
-	services_users "backend/services/users"
+	services_reservations "backend/services/reservations"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"github.com/golang-jwt/jwt"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // テストコード
@@ -25,8 +27,8 @@ func TestGetReservations(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &MockReservationService{}
-	handler := NewReservationHandler(&services_users.MockUserService{}, mockService, nil)
+	mockService := new(services_reservations.MockReservationService)
+	handler := NewReservationHandler(nil, mockService, nil)
 
 	// モックデータの設定
 	reservationDate1, _ := time.Parse(time.RFC3339, "2024-10-01T18:00:00Z")
@@ -62,10 +64,9 @@ func TestAddReservation(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockReservationService := &MockReservationService{}
-	mockUserService := &services_users.MockUserService{}
-	mockNotificationService := &services_notifications.MockNotificationService{}
-	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
+	mockReservationService := new(services_reservations.MockReservationService)
+	mockNotificationService := new(services_notifications.MockNotificationService)
+	handler := NewReservationHandler(nil, mockReservationService, mockNotificationService)
 
 	// JWTトークンのモックを作成
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &auth.Claims{
@@ -80,7 +81,6 @@ func TestAddReservation(t *testing.T) {
 	req.AddCookie(cookie)
 
 	// モックデータの設定
-	mockUserService.On("FetchUserById", "user1").Return(&models.UserData{ID: "user1", Name: "John Doe"}, nil)
 	mockReservationService.On("CreateReservation", "user1", "2024-10-01 18:00:00", 2, "Window seat", "confirmed").Return("reservationId", nil)
 	mockNotificationService.On("CreateNotification", "user1", "reservationId", "New reservation created for user user1").Return(nil)
 
@@ -94,7 +94,6 @@ func TestAddReservation(t *testing.T) {
 	}
 
 	// モックが期待通りに呼び出されたかを確認
-	mockUserService.AssertExpectations(t)
 	mockReservationService.AssertExpectations(t)
 	mockNotificationService.AssertExpectations(t)
 }
@@ -109,10 +108,8 @@ func TestAddReservation_UserNotFound(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockReservationService := &MockReservationService{}
-	mockUserService := &services_users.MockUserService{}
-	mockNotificationService := &services_notifications.MockNotificationService{}
-	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
+	mockReservationService := new(services_reservations.MockReservationService)
+	handler := NewReservationHandler(nil, mockReservationService, nil)
 
 	// JWTトークンのモックを作成
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &auth.Claims{
@@ -126,8 +123,9 @@ func TestAddReservation_UserNotFound(t *testing.T) {
 	}
 	req.AddCookie(cookie)
 
-	// モックデータの設定
-	mockUserService.On("FetchUserById", "user1").Return(nil, nil) // ユーザーが存在しない場合
+	// 予約作成時にモックを設定（通常はここでエラーが返るが、ユーザーが存在しないため不要）
+	mockReservationService.On("CreateReservation", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).
+		Return("", errors.New("user not found")) // ここではエラーが発生することはないが、あくまで安全のため
 
 	// ハンドラーを実行
 	if assert.NoError(t, handler.AddReservation(c)) {
@@ -139,5 +137,5 @@ func TestAddReservation_UserNotFound(t *testing.T) {
 	}
 
 	// モックが期待通りに呼び出されたかを確認
-	mockUserService.AssertExpectations(t)
+	mockReservationService.AssertExpectations(t)
 }
