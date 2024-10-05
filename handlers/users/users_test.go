@@ -52,7 +52,7 @@ func TestGetUserByEmailAndPassword(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &services_users.MockUserService{}
+	mockService := new(services_users.MockUserService)
 	handler := NewUserHandler(mockService)
 
 	// モックデータの設定
@@ -86,7 +86,7 @@ func TestAddUser(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &services_users.MockUserService{}
+	mockService := new(services_users.MockUserService)
 	handler := NewUserHandler(mockService)
 
 	// サービス側でのモックの挙動を設定
@@ -113,7 +113,7 @@ func TestAddUserAlreadyExists(t *testing.T) {
 	c := e.NewContext(req, rec)
 
 	// モックサービスをインスタンス化
-	mockService := &services_users.MockUserService{}
+	mockService := new(services_users.MockUserService)
 	handler := NewUserHandler(mockService)
 
 	// サービス側でのモックの挙動を設定

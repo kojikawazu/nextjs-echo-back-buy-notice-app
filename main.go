@@ -6,6 +6,7 @@ import (
 	handlers_reservations "backend/handlers/reservations"
 	handlers_users "backend/handlers/users"
 	repositories_notifications "backend/repositories/notifications"
+	repositories_reservations "backend/repositories/reservations"
 	repositories_users "backend/repositories/users"
 	services_notifications "backend/services/notifications"
 	services_reservations "backend/services/reservations"
@@ -60,11 +61,12 @@ func main() {
 	}))
 
 	// RepositoryとServiceとHandlerの初期化
-	notificationRepository := repositories_notifications.NewNotificationRepository()
 	userRepository := repositories_users.NewUserRepository()
+	reservationRepository := repositories_reservations.NewReservationRepository()
+	notificationRepository := repositories_notifications.NewNotificationRepository()
 
 	userService := services_users.NewUserService(userRepository)
-	reservationService := &services_reservations.ReservationServiceImpl{}
+	reservationService := services_reservations.NewReservationService(userRepository, reservationRepository)
 	notificationService := services_notifications.NewNotificationService(userService, reservationService, notificationRepository)
 
 	authHandler := auth.NewAuthHandler(userService)
