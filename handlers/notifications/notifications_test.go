@@ -2,10 +2,10 @@ package handlers_notifications
 
 import (
 	handlers_reservations "backend/handlers/reservations"
-	handlers_users "backend/handlers/users"
 	"backend/models"
 	repositories_notifications "backend/repositories/notifications"
 	services_notifications "backend/services/notifications"
+	services_users "backend/services/users"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -60,7 +60,7 @@ func TestAddNotification(t *testing.T) {
 
 	// モックサービスとリポジトリをインスタンス化
 	mockNotificationRepository := new(repositories_notifications.MockNotificationRepository)
-	mockUserService := new(handlers_users.MockUserService)
+	mockUserService := new(services_users.MockUserService)
 	mockReservationService := new(handlers_reservations.MockReservationService)
 
 	// NotificationServiceのインスタンス化
@@ -104,7 +104,7 @@ func TestAddNotification_UserNotFound(t *testing.T) {
 
 	// モックサービスとリポジトリをインスタンス化
 	mockNotificationRepository := new(repositories_notifications.MockNotificationRepository)
-	mockUserService := new(handlers_users.MockUserService)
+	mockUserService := new(services_users.MockUserService)
 	mockReservationService := new(handlers_reservations.MockReservationService)
 
 	// NotificationServiceのインスタンス化

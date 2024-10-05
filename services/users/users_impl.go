@@ -1,6 +1,9 @@
 package services_users
 
-import "backend/models"
+import (
+	"backend/models"
+	repositories_users "backend/repositories/users"
+)
 
 // UserServiceインターフェース
 type UserService interface {
@@ -12,24 +15,14 @@ type UserService interface {
 }
 
 // UserServiceImplはUserServiceインターフェースを実装する
-type UserServiceImpl struct{}
-
-func (u *UserServiceImpl) FetchUsers() ([]models.UserData, error) {
-	return FetchUsers()
+type UserServiceImpl struct {
+	UserRepository repositories_users.UserRepository
 }
 
-func (u *UserServiceImpl) FetchUserByEmailAndPassword(email, password string) (*models.UserData, error) {
-	return FetchUserByEmailAndPassword(email, password)
-}
-
-func (u *UserServiceImpl) FetchUserById(id string) (*models.UserData, error) {
-	return FetchUserById(id)
-}
-
-func (u *UserServiceImpl) FetchUserByEmail(email string) (*models.UserData, error) {
-	return FetchUserByEmail(email)
-}
-
-func (u *UserServiceImpl) CreateUser(name, email, password string) error {
-	return CreateUser(name, email, password)
+func NewUserService(
+	userRepository repositories_users.UserRepository,
+) UserService {
+	return &UserServiceImpl{
+		UserRepository: userRepository,
+	}
 }

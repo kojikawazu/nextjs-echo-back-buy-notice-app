@@ -1,4 +1,4 @@
-package handlers_users
+package services_users
 
 import (
 	"backend/models"

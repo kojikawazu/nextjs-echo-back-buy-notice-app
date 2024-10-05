@@ -2,9 +2,9 @@ package handlers_reservations
 
 import (
 	"backend/auth"
-	handlers_users "backend/handlers/users"
 	"backend/models"
 	services_notifications "backend/services/notifications"
+	services_users "backend/services/users"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,7 +26,7 @@ func TestGetReservations(t *testing.T) {
 
 	// モックサービスをインスタンス化
 	mockService := &MockReservationService{}
-	handler := NewReservationHandler(&handlers_users.MockUserService{}, mockService, nil)
+	handler := NewReservationHandler(&services_users.MockUserService{}, mockService, nil)
 
 	// モックデータの設定
 	reservationDate1, _ := time.Parse(time.RFC3339, "2024-10-01T18:00:00Z")
@@ -63,7 +63,7 @@ func TestAddReservation(t *testing.T) {
 
 	// モックサービスをインスタンス化
 	mockReservationService := &MockReservationService{}
-	mockUserService := &handlers_users.MockUserService{}
+	mockUserService := &services_users.MockUserService{}
 	mockNotificationService := &services_notifications.MockNotificationService{}
 	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
 
@@ -110,7 +110,7 @@ func TestAddReservation_UserNotFound(t *testing.T) {
 
 	// モックサービスをインスタンス化
 	mockReservationService := &MockReservationService{}
-	mockUserService := &handlers_users.MockUserService{}
+	mockUserService := &services_users.MockUserService{}
 	mockNotificationService := &services_notifications.MockNotificationService{}
 	handler := NewReservationHandler(mockUserService, mockReservationService, mockNotificationService)
 
